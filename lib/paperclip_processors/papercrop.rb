@@ -5,12 +5,29 @@ module Paperclip
 
     def transformation_command
       if crop_command
-        crop_command + super.join(' ').sub(/ -crop \S+/, '').split(' ')
+        #debugger if @options[:style] == :card
+        crop_command + (keep_initial_crop? ? fix_initial_crop(super) : drop_initial_parameter(:crop, super))
       else
         super
       end
     end
 
+    def keep_initial_crop?
+      @target_geometry.modifier == '#'
+    end
+
+    def drop_initial_parameter(parameter, initial)
+      initial.join(' ').sub(/ -#{parameter} \S+/, '').split(' ')
+    end
+
+    def fix_initial_crop(initial)
+      width = @target_geometry.width.to_i
+      height = @target_geometry.height.to_i
+      initial[initial.index('-crop') + 1] = "#{width}x#{height}+0+0"
+      initial[initial.index('-resize') + 1] = "#{width}x#{height}^^"
+
+      %w(+repage -gravity center) + initial
+    end
 
     def crop_command
       target = @attachment.instance
@@ -28,6 +45,5 @@ module Paperclip
         end
       end
     end
-
   end
 end
